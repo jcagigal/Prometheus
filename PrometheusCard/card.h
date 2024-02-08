@@ -2,6 +2,7 @@
 
 #define JSetOldDPMSLevel    CardData[14]
 #define JDPMSLevel          CardData[15]
+#define MonitorSwitchType   CardData[13]
 
 #define VENDOR_E3B            3643
 #define VENDOR_MATAY          44359
@@ -53,7 +54,7 @@ struct CardBase
 
 BOOL Init3dfxVoodoo(struct CardBase *cb, struct BoardInfo *bi);      // check Banshee/Voodoo3/4/5 based cards
 BOOL Init3DLabsPermedia2(struct CardBase *cb, struct BoardInfo *bi); // check Permedia2 based cards (3DLabs/TI)
-BOOL InitCirrusGD5446(struct BoardInfo *bi);    // check GD5446 based Cirrus cards
+BOOL InitCirrusGD5446(struct CardBase *cb, struct BoardInfo *bi);    // check GD5446 based Cirrus cards
 BOOL InitS3ViRGE(struct CardBase *cb, struct BoardInfo *bi);         // check ViRGE based S3 cards
 VOID InitDMAMemory(struct CardBase *cb, APTR memory, ULONG size);
 

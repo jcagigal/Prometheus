@@ -116,6 +116,10 @@ typedef enum {
   BT_CVisionPPC,
   BT_GREX,
   BT_Prototype7,
+  BT_Reserved,
+  BT_Reserved2,
+  BT_MNT_VA2000,
+  BT_MNT_ZZ9000,
   BT_MaxBoardTypes
 } BTYPE;
 
@@ -124,20 +128,25 @@ typedef enum {
  */
 typedef enum {
   PCT_Unknown,
-  PCT_S11483,       // Sierra S11483: HiColor 15 bit, oMniBus, Domino
-  PCT_S15025,       // Sierra S15025: TrueColor 32 bit, oMniBus
+  PCT_S11483,         // Sierra S11483: HiColor 15 bit, oMniBus, Domino
+  PCT_S15025,         // Sierra S15025: TrueColor 32 bit, oMniBus
   PCT_CirrusGD542x,   // Cirrus GD542x internal: TrueColor 24 bit
-  PCT_Domino,       // is in fact a Sierra S11483
-  PCT_BT482,        // BrookTree BT482: TrueColor 32 bit, Merlin
-  PCT_Music,        // Music MU9C4910: TrueColor 24 bit, oMniBus
-  PCT_ICS5300,      // ICS 5300: ...., Retina BLT Z3
+  PCT_Domino,         // is in fact a Sierra S11483
+  PCT_BT482,          // BrookTree BT482: TrueColor 32 bit, Merlin
+  PCT_Music,          // Music MU9C4910: TrueColor 24 bit, oMniBus
+  PCT_ICS5300,        // ICS 5300: ...., Retina BLT Z3
   PCT_CirrusGD5446,   // Cirrus GD5446 internal: TrueColor 24 bit
   PCT_CirrusGD5434,   // Cirrus GD5434 internal: TrueColor 32 bit
-  PCT_S3Trio64,     // S3 Trio64 internal: TrueColor 32 bit
+  PCT_S3Trio64,       // S3 Trio64 internal: TrueColor 32 bit
   PCT_A2410_xxx,      // A2410 DAC, *type unknown*
-  PCT_S3ViRGE,      // S3 ViRGE internal: TrueColor 32 bit
-  PCT_3dfxVoodoo,   // 3dfx Voodoo internal
+  PCT_S3ViRGE,        // S3 ViRGE internal: TrueColor 32 bit
+  PCT_3dfxVoodoo,     // 3dfx Voodoo internal
   PCT_TIPermedia2,    // TexasInstruments TVP4020 Permedia2 internal
+  PCT_ATIRV100,       // ATI Technologies Radeon/Radeon 7000 internal
+  PCT_reserved,
+  PCT_reserved2,
+  PCT_MNT_VA2000,
+  PCT_MNT_ZZ9000,
   PCT_MaxPaletteChipTypes
 } PCTYPE;
 
@@ -157,6 +166,11 @@ typedef enum {
   GCT_S3ViRGE,
   GCT_3dfxVoodoo,
   GCT_TIPermedia2,
+  GCT_ATIRV100,
+  GCT_reserved,
+  GCT_reserved2,
+  GCT_MNT_VA2000,
+  GCT_MNT_ZZ9000,
   GCT_MaxGraphicsControllerTypes
 } GCTYPE;
 
@@ -354,6 +368,21 @@ enum  {
 #define ABMA_ConstantBytesPerRow  (TAG_USER+16)
 #define ABMA_UserPrivate          (TAG_USER+17)
 #define ABMA_ConstantByteSwapping (TAG_USER+18)
+/* the following are reserved for Os 4 but not in current use */
+#define ABMA_Memory               (TAG_USER+19)
+#define ABMA_NotifyHook           (TAG_USER+20)
+#define ABMA_Locked               (TAG_USER+21)
+/* the following are new */
+#define ABMA_System               (TAG_USER+22)
+/*
+ * THOR: New for V45 Gfx/Intuiton
+ * "by accident", this is identically to SA_DisplayID of intuition
+ * resp. SA_Behind, SA_Colors, SA_Colors32
+ */
+#define ABMA_DisplayID                  (TAG_USER + 32 + 0x12)
+#define ABMA_BitmapInvisible            (TAG_USER + 32 + 0x17)
+#define ABMA_BitmapColors               (TAG_USER + 32 + 0x09)
+#define ABMA_BitmapColors32             (TAG_USER + 32 + 0x23)
 
 /************************************************************************/
 
@@ -458,11 +487,11 @@ struct BoardInfo{
   void ASM              (*BlitRectNoMaskCompleteDefault)(__REGA0(struct BoardInfo *), __REGA1(struct RenderInfo *), __REGA2(struct RenderInfo *), __REGD0(WORD), __REGD1(WORD), __REGD2(WORD), __REGD3(WORD), __REGD4(WORD), __REGD5(WORD), __REGD6(UBYTE), __REGD7(RGBFTYPE));
   void ASM              (*BlitPlanar2Direct)(__REGA0(struct BoardInfo *), __REGA1(struct BitMap *), __REGA2(struct RenderInfo *), __REGA3(struct ColorIndexMapping *), __REGD0(SHORT), __REGD1(SHORT), __REGD2(SHORT), __REGD3(SHORT), __REGD4(SHORT), __REGD5(SHORT), __REGD6(UBYTE), __REGD7(UBYTE));
   void ASM              (*BlitPlanar2DirectDefault)(__REGA0(struct BoardInfo *), __REGA1(struct BitMap *), __REGA2(struct RenderInfo *), __REGA3(struct ColorIndexMapping *), __REGD0(SHORT), __REGD1(SHORT), __REGD2(SHORT), __REGD3(SHORT), __REGD4(SHORT), __REGD5(SHORT), __REGD6(UBYTE), __REGD7(UBYTE));
-  void ASM              (*Reserved0)(__REGA0(struct BoardInfo *));
-  void ASM              (*Reserved0Default)(__REGA0(struct BoardInfo *));
-  void ASM              (*Reserved1)(__REGA0(struct BoardInfo *));
-  void ASM              (*Reserved1Default)(__REGA0(struct BoardInfo *));
-  void ASM              (*Reserved2)(__REGA0(struct BoardInfo *));
+  BOOL ASM              (*EnableSoftSprite)(__REGA0(struct BoardInfo *),__REGD0(ULONG formatflags),__REGA1(struct ModeInfo *));
+  BOOL ASM              (*EnableSoftSpriteDefault)(__REGA0(struct BoardInfo *),__REGD0(ULONG formatflags),__REGA1(struct ModeInfo *));
+  APTR ASM              (*AllocCardMemAbs)(__REGA0(struct BoardInfo *),__REGD0(ULONG size), __REGA1(char *target));
+  void ASM              (*SetSplitPosition)(__REGA0(struct BoardInfo *),__REGD0(SHORT));
+  void ASM              (*ReInitMemory)(__REGA0(struct BoardInfo *),__REGD0(RGBFTYPE));
   void ASM              (*Reserved2Default)(__REGA0(struct BoardInfo *));
   void ASM              (*Reserved3)(__REGA0(struct BoardInfo *));
   void ASM              (*Reserved3Default)(__REGA0(struct BoardInfo *));
@@ -536,6 +565,14 @@ struct BoardInfo{
   LONG                  EssentialFormats;           /* these RGBFormats will be used when user does not choose "all"
                                               will be filled by InitBoard() */
   UBYTE                 *MouseImageBuffer;          /* rendered to the destination color format */
+/* Additional viewport stuff */
+  struct ViewPort    *backViewPort;     /* The view port visible on the screen behind */
+  struct BitMap      *backBitMap;       /* Its bitmap */
+  struct BitMapExtra *backExtra;        /* its bitmapExtra */
+  WORD                YSplit;
+  ULONG               MaxPlanarMemory;  /* Size of a bitplane if planar. If left blank, MemorySize>>2 */
+  ULONG               MaxBMWidth;       /* Maximum width of a bitmap */
+  ULONG               MaxBMHeight;      /* Maximum height of a bitmap */
 };
 
 /* BoardInfo flags */
@@ -547,6 +584,9 @@ struct BoardInfo{
 #define BIB_CACHEMODECHANGE    3    /* board memory may be set to Imprecise (060) or Nonserialised (040) */
 #define BIB_VBLANKINTERRUPT    4    /* board can cause a hardware interrupt on a vertical retrace */
 #define BIB_HASSPRITEBUFFER    5    /* board has allocated memory for software sprite image and save buffer */
+
+#define BIB_VGASCREENSPLIT               6              /* has a screen B with fixed screen position for split-screens */
+#define BIB_DBLCLOCKHALFSPRITEX          7              /* horizontal sprite position halfed for double clock modes */
 
 #define BIB_DBLSCANDBLSPRITEY    8    /* hardware sprite y position is doubled on doublescan display modes */
 #define BIB_ILACEHALFSPRITEY     9    /* hardware sprite y position is halved on interlace display modes */
@@ -579,6 +619,8 @@ struct BoardInfo{
 #define BIF_CACHEMODECHANGE   (1<<BIB_CACHEMODECHANGE)
 #define BIF_VBLANKINTERRUPT   (1<<BIB_VBLANKINTERRUPT)
 #define BIF_HASSPRITEBUFFER   (1<<BIB_HASSPRITEBUFFER)
+#define BIF_VGASCREENSPLIT              (1<<BIB_VGASCREENSPLIT)
+#define BIF_DBLCLOCKHALFSPRITEX         (1<<BIB_DBLCLOCKHALFSPRITEX)
 #define BIF_DBLSCANDBLSPRITEY   (1<<BIB_DBLSCANDBLSPRITEY)
 #define BIF_ILACEHALFSPRITEY    (1<<BIB_ILACEHALFSPRITEY)
 #define BIF_ILACEDBLROWOFFSET   (1<<BIB_ILACEDBLROWOFFSET)
@@ -598,6 +640,8 @@ struct BoardInfo{
 #define BIF_NOBLITTER       (1<<BIB_NOBLITTER)
 #define BIF_SYSTEM2SCREENBLITS  (1<<BIB_SYSTEM2SCREENBLITS)
 #define BIF_GRANTDIRECTACCESS   (1<<BIB_GRANTDIRECTACCESS)
+#define BIF_PALETTESWITCH               (1<<BIB_PALETTESWITCH)
+
 #define BIF_OVERCLOCK       (1<<BIB_OVERCLOCK)
 
 #define BIF_IGNOREMASK  BIF_NOMASKBLITS

@@ -2,7 +2,7 @@
 #include <proto/prometheus.h>
 #include <libraries/prometheus.h>
 #include <proto/picasso96_chip.h>
-
+#include "boardinfo.h"
 #include "card.h"
 
 struct CardInfo

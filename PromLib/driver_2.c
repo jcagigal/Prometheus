@@ -1,4 +1,6 @@
 /* 
+$VER: driver.c 4.6 (08.02.2024) by Dennis Boon and Jaime Cagigal
+- Added configurable monitor switching using CIA signals and extra tags for PrmScan.
 $VER: driver.c 4.5 (22.01.2024) by Dennis Boon and Jaime Cagigal
 - Made a fix to the bus numbering of bridges and the setting of bridge memory limits
 $VER: driver.c 4.4 (08.05.2023) by Dennis Boon with fixes from Mathias Heyer
@@ -40,6 +42,8 @@ $VER: driver.c 2.5 (19.12.2002) by Grzegorz Kraszewski
 #include <exec/resident.h>
 #include <exec/memory.h>
 #include <exec/interrupts.h>
+#include <exec/lists.h>
+#include "lists.h"
 #include <exec/nodes.h>
 #include <exec/execbase.h>
 #include <libraries/configvars.h>
@@ -58,7 +62,7 @@ typedef struct
 } PCIBoard;
 
 
-#ifdef __VBCC__
+#ifndef __VBCC__
 #include <inline/prometheuscard_protos.h> //private include
 #else
 #include <proto/prometheus_card.h>
@@ -86,6 +90,7 @@ typedef struct
 #define VID_TI                 0x104c
 #define VID_ATI                0x1002
 #define VID_S3                 0x5333
+#define VID_CIRRUS             0x1013
 
 #define DEVID_MPC107           0x0004
 #define DEVID_MPC834X          0x0086
@@ -206,7 +211,7 @@ struct PciConfig
 #define BLOCK_CFGMEM   4
 
 #define VERSION  4
-#define REVISION 5
+#define REVISION 6
 
 #define CARD_NAME "Picasso96/Prometheus.card"
 
@@ -216,7 +221,7 @@ struct PciConfig
 #define __DBG__
 #endif
 
-char libid[]   = "\0$VER: prometheus.library 4.5 " __DBG__ "(22.01.2024)\r\n";
+char libid[]   = "\0$VER: prometheus.library 4.6 " __DBG__ "(08.02.2024)\r\n";
 char build[]   = "build date: " __DATE__ ", " __TIME__ "\n";
 char libname[] = "prometheus.library\0";
 
@@ -661,6 +666,15 @@ void QueryCard (struct PrometheusBase *pb, struct PCIBus *pcibus, volatile struc
       pcinode->pn_TagList[tagindex].ti_Tag = PRM_HeaderType;
       CacheClearU();
       pcinode->pn_TagList[tagindex++].ti_Data = conf->pc_HeaderType;
+	  
+	  pcinode->pn_TagList[tagindex].ti_Tag = PRM_LatencyTimer;
+      CacheClearU();
+      pcinode->pn_TagList[tagindex++].ti_Data = conf->pc_LatencyTimer;
+
+	  pcinode->pn_TagList[tagindex].ti_Tag = PRM_CacheLineSize;
+      CacheClearU();
+      pcinode->pn_TagList[tagindex++].ti_Data = conf->pc_CacheLineSize;
+
 
       /* up to six base registers */
 
@@ -671,6 +685,14 @@ void QueryCard (struct PrometheusBase *pb, struct PCIBus *pcibus, volatile struc
         conf->types.t1.pc_ROM = 0xFEFFFFFF;
         CacheClearU();
         memsize = swapl(conf->types.t1.pc_ROM);
+		
+		pcinode->pn_TagList[tagindex].ti_Tag = PRM_InterruptLine;
+		CacheClearU();
+		pcinode->pn_TagList[tagindex++].ti_Data = conf->types.t1.pc_IntLine;
+		  
+		pcinode->pn_TagList[tagindex].ti_Tag = PRM_InterruptPin;
+		CacheClearU();
+		pcinode->pn_TagList[tagindex++].ti_Data = conf->types.t1.pc_IntPin;
       }
 	  else
       {
@@ -680,6 +702,15 @@ void QueryCard (struct PrometheusBase *pb, struct PCIBus *pcibus, volatile struc
 		pcinode->pn_TagList[tagindex].ti_Tag = PRM_SubsysID;
 		CacheClearU();
 		pcinode->pn_TagList[tagindex++].ti_Data = swapw(conf->types.t0.pc_SubsystemID);
+
+		pcinode->pn_TagList[tagindex].ti_Tag = PRM_InterruptLine;
+		CacheClearU();
+		pcinode->pn_TagList[tagindex++].ti_Data = conf->types.t0.pc_IntLine;
+		  
+		pcinode->pn_TagList[tagindex].ti_Tag = PRM_InterruptPin;
+		CacheClearU();
+		pcinode->pn_TagList[tagindex++].ti_Data = conf->types.t0.pc_IntPin;
+
 
         for (basereg = 0; basereg < 6; basereg++)
         {
@@ -729,7 +760,10 @@ void QueryCard (struct PrometheusBase *pb, struct PCIBus *pcibus, volatile struc
             if (basereg == 0)
               memsize = -1;
           }
-          if (memsize == 0xFFFFFFFF) memsize = 0;       /* board doesn't respond */
+          if (memsize == 0xFFFFFFFF) {
+			  D(kprintf("[QueryCard] memsize=0 board doesn't respond\n"));
+			  memsize = 0;       /* board doesn't respond */
+		  }
 
           if (memsize)
           {
@@ -755,7 +789,7 @@ void QueryCard (struct PrometheusBase *pb, struct PCIBus *pcibus, volatile struc
               else
                 memtype = BLOCK_MEMORY;
               memsize = -(memsize & 0xFFFFFFF0);
-              D(kprintf("[QueryCard] mem size: 0x%08lx\n", memsize));
+              D(kprintf("[QueryCard] mem size: 0x%032lx\n", memsize));
             }            
             pcinode->pn_TagList[tagindex].ti_Tag = PRM_MemorySize0 + basereg;
             pcinode->pn_TagList[tagindex++].ti_Data = memsize;
@@ -778,7 +812,10 @@ void QueryCard (struct PrometheusBase *pb, struct PCIBus *pcibus, volatile struc
       memsize = swapl(conf->types.t0.pc_ROM);
 
       }
-      if (memsize == 0xFFFFFFFF) memsize = 0;         /* board doesn't respond */
+	  if (memsize == 0xFFFFFFFF) {
+		D(kprintf("[QueryCard] memsize=0 board doesn't respond\n"));
+		memsize = 0;       /* board doesn't respond */
+	  }
 
       /* add board rom space request */
       if (memsize)

@@ -57,6 +57,15 @@ typedef VOID PCIBoard;
 #define PRM_SubsysID          0x6EDA000B
 #define PRM_Interface         0x6EDA000C
 
+
+#define PRM_LatencyTimer      0x6EDA0017
+#define PRM_CacheLineSize     0x6EDA0018
+
+#define PRM_InterruptPin      0x6EDA0019
+#define PRM_InterruptLine     0x6EDA001A
+
+
+
 #endif /* LIBRARIES_PROMETHEUS_H */
 
 

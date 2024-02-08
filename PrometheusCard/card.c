@@ -6,6 +6,7 @@
 #include <libraries/prometheus.h>
 #include <exec/execbase.h>
 #include <hardware/intbits.h>
+#include <hardware/cia.h>
 
 #include "boardinfo.h"
 #include "card.h"
@@ -17,6 +18,15 @@
 
 typedef void (*dpmsFunc)(__REGA0(struct BoardInfo *bi), __REGD0(ULONG level));
 typedef void (*intFunc)(void);
+
+enum SwitchType {
+    NONE = 0,
+    CTS,
+    RTS,
+    DTR,
+    SEL,
+	DPMS
+};
 
 /******************************************************************************************
 *                                                                                         *
@@ -68,21 +78,47 @@ void RegisterOwner(struct CardBase *cb, void *board, struct Node *driver)
 *                                                                                         *
 ******************************************************************************************/
 
-BOOL SetSwitch(__REGA0(struct BoardInfo *bi), __REGD0(BOOL state))
+UWORD SetSwitch(__REGA0(struct BoardInfo *bi), __REGD0(UWORD enabled))
   {
-    BOOL oldState = (bi->MoniSwitch & 1) ? TRUE : FALSE;
-  
-    bi->MoniSwitch = (bi->MoniSwitch & ~1) | (state ? 1 : 0);
-
-    if (oldState != (state ? TRUE : FALSE))
-      {
-        /* when anything changed shut primary video off */
-        /* or restore current DPMS level logged by our  */
-        /* SetDPMSLevel replacement below               */
-
-        ((dpmsFunc)bi->JSetOldDPMSLevel)(bi, state ? bi->JDPMSLevel : DPMS_OFF);
-      }
-    return oldState;
+	  BOOL oldState = bi->MoniSwitch;
+	  int switch_type = bi->MonitorSwitchType;
+	  
+	  UBYTE cia_bits=0;
+	  switch (switch_type)
+	  {
+	    case CTS:
+			cia_bits=CIAF_COMCTS;
+			break;
+	    case RTS:
+			cia_bits=CIAF_COMRTS;
+			break;
+	    case DTR:
+			cia_bits=CIAF_COMDTR;
+			break;
+        case SEL:
+			cia_bits=CIAF_PRTRSEL;
+			break;
+	  }
+	  if (cia_bits!=0) {
+		((volatile struct CIA *)0xbfd000)->ciaddra |= cia_bits;
+		if (enabled)
+		{
+			((volatile struct CIA *)0xbfd000)->ciapra &= ~cia_bits;
+		} else {
+			((volatile struct CIA *)0xbfd000)->ciapra |= cia_bits;
+		}
+  	  } else {
+	    bi->MoniSwitch = 1-enabled;
+		if (oldState != enabled)
+		  {
+			/* when anything changed shut primary video off */
+			/* or restore current DPMS level logged by our  */
+			/* SetDPMSLevel replacement below               */
+			((dpmsFunc)bi->JSetOldDPMSLevel)(bi, enabled ? bi->JDPMSLevel : DPMS_OFF);
+		  }
+	  }
+	bi->MoniSwitch = 1- enabled;
+    return bi->MoniSwitch;
   }
 
 /********************************************************************************************
@@ -181,7 +217,7 @@ BOOL InitCard(__REGA0(struct BoardInfo *bi), __REGA1(char **ToolTypes), __REGA6(
     struct Library* PrometheusBase = cb->cb_PrometheusBase;
     BOOL found = FALSE;
     BOOL forbid_interrupts = FALSE;
-    BOOL special_switch = FALSE;
+    int switch_type = NONE;
     ULONG dma_size = 0;
     struct Library* UtilityBase = bi->UtilBase;
 
@@ -202,9 +238,21 @@ BOOL InitCard(__REGA0(struct BoardInfo *bi), __REGA1(char **ToolTypes), __REGA6(
       
             if (bi->Flags & BIF_INDISPLAYCHAIN)
               {
-                if (Stricmp(ToolType, "SWITCHTYPE=JAVOSOFT") == 0)
+                if ((Stricmp(ToolType, "SWITCHTYPE=JAVOSOFT") == 0) || (Stricmp(ToolType, "SWITCHTYPE=DPMS") == 0))
+				  {
+					switch_type = DPMS;
+				  }	else if (Stricmp(ToolType, "SWITCHTYPE=CTS") == 0)
+				  {
+					switch_type = CTS;
+				  }	else if (Stricmp(ToolType, "SWITCHTYPE=RTS") == 0)
                   {
-                    special_switch = TRUE;
+					switch_type = RTS;
+                  }	else if (Stricmp(ToolType, "SWITCHTYPE=DTR") == 0)
+                  {
+					switch_type = DTR;
+                  }	else if (Stricmp(ToolType, "SWITCHTYPE=SEL") == 0)
+                  {
+					switch_type = SEL;
                   }
               }
 
@@ -270,23 +318,23 @@ BOOL InitCard(__REGA0(struct BoardInfo *bi), __REGA1(char **ToolTypes), __REGA6(
 
           bi->Flags &= ~BIF_CACHEMODECHANGE;
         }
-      if (special_switch)
+	  if (NONE != switch_type)
         {
           /* plug in handler for external monitor switch */
-
-          bi->SetSwitch = SetSwitch;
-
-          /* save chip specific SetDPMSLevel function */
-
-          bi->JSetOldDPMSLevel = (ULONG)bi->SetDPMSLevel;
-
-          /* and overwrite with enhanced implementation */
-
-          bi->SetDPMSLevel = SetDPMSLevel;
+          bi->MonitorSwitchType = switch_type;
+          bi->SetSwitch = (void *)SetSwitch;
 
           /* set startup value */
-
           bi->MoniSwitch = (UWORD)0xFFFF;
+
+          if (DPMS == switch_type)
+          {
+            /* save chip specific SetDPMSLevel function */
+            bi->JSetOldDPMSLevel = (ULONG)bi->SetDPMSLevel;
+
+            /* and overwrite with enhanced implementation */
+            bi->SetDPMSLevel = SetDPMSLevel;
+          }
         }
 
 

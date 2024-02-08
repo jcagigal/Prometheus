@@ -6,11 +6,23 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/prometheus.h>
+
+#if defined(__VBCC__)
+#include <string.h>
+#else
 #include <faststring.h>
+#endif
 
-struct Library *SysBase, *DOSBase, *PrometheusBase;
+#if defined(__VBCC__)
+extern struct Library *SysBase, *DOSBase;
+#else
+struct Library *SysBase, *DOSBase;
+#endif
+struct Library *PrometheusBase;
 
-const char *VString = "$VER: prmscan 1.6 (14.9.2002) by Grzegorz Kraszewski.\n";
+#define STR_VENDORID_MAX 128
+
+const char VString[] = "$VER: prmscan 1.8 (14.09.2023) by Grzegorz Kraszewski, Tobias Seiler, Dennis van der Boon, Jaime Cagigal\n";
 
 
 UWORD HexStrToWord(UBYTE *buffer)
@@ -66,9 +78,15 @@ LONG GetVendorString(BPTR vendors_file, UWORD vendor, UBYTE *buffer, LONG bufsiz
     Seek(vendors_file, 0, OFFSET_BEGINNING);
     while (FGets(vendors_file, buffer, bufsize))
      {
-      if (*buffer == ';') continue;              /* comment */
-      if (*buffer == 0x09) continue;             /* device description */
-      if (*buffer == 0x20) continue;
+      if ((*buffer & 0xFF) == ';') continue;              /* comment */
+      if ((*buffer & 0xFF) == 0x09) continue;             /* device description */
+      if ((*buffer & 0xFF) == 0x20) continue;
+	  if ((buffer[0] == 'f' && buffer[1] == 'f' && buffer[2] == 'f' && buffer[3] == 'f') 
+		  || (buffer[0] == 'F' && buffer[1] == 'F' && buffer[2] == 'F' && buffer[3] == 'F'))
+		{
+			sprintf (buffer, "unknown ($%04lx)", vendor);
+			return 0;
+		}
       if (HexStrToWord(buffer) == vendor)
        {
         ShiftBufferLeft(buffer, 5);
@@ -113,43 +131,56 @@ LONG GetDeviceString(BPTR vendors_file, UWORD device, UBYTE *buffer, LONG bufsiz
  }
 
 
-LONG Main (void)
+int main(void)
  {
-  UBYTE vendor_name[80];
-  UBYTE device_name[80];
+  UBYTE vendor_name[STR_VENDORID_MAX];
+  UBYTE device_name[STR_VENDORID_MAX];
 
-  Printf ("\nPrmscan 1.6 by Grzegorz Kraszewski.\n");
+  Printf ("\nPrmScan 1.8 (14.09.2023) by Grzegorz Kraszewski, Dennis van der Boon & Jaime Cagigal\n");
   Printf ("PCI cards listing:\n-------------------------------------------------\n");
   if (PrometheusBase = OpenLibrary ("prometheus.library", 2))
    {
     APTR board = NULL;
-    ULONG vendor, device, revision, dclass, dsubclass, blkaddr, blksize, slot, function;
+    ULONG vendor, device, revision, dclass, dsubclass, blkaddr, blksize, bus, slot, function;
+    ULONG dheadertype, dinterface;
+    ULONG dsubsysvendor,dsubsysid;
     ULONG romaddr, romsize;
+	UBYTE pc_LatencyTimer;
+	UBYTE pc_IntLine;
+	UBYTE pc_IntPin;
     WORD blk;
     BPTR vendors_file;
     struct Node *owner;
     STRPTR owner_name = "NONE";
+	
+	Printf ("\nprometheus.library %ld.%ld\n\n", PrometheusBase->lib_Version, PrometheusBase->lib_Revision);
+	Printf ("PCI cards listing:\n-------------------------------------------------\n");
 
     vendors_file = Open("DEVS:PCI/vendors.txt", MODE_OLDFILE);
 
     while (board = Prm_FindBoardTags(board, TAG_END))
      {
       Prm_GetBoardAttrsTags(board,
-       PRM_Vendor, (ULONG)&vendor,
-       PRM_Device, (ULONG)&device,
-       PRM_Revision, (ULONG)&revision,
-       PRM_Class, (ULONG)&dclass,
-       PRM_SubClass, (ULONG)&dsubclass,
-       PRM_SlotNumber, (ULONG)&slot,
-       PRM_FunctionNumber, (ULONG)&function,
-       PRM_BoardOwner, (ULONG)&owner,
+        PRM_Vendor, (ULONG)&vendor,
+        PRM_Device, (ULONG)&device,
+        PRM_Revision, (ULONG)&revision,
+        PRM_Class, (ULONG)&dclass,
+        PRM_SubClass, (ULONG)&dsubclass,
+        PRM_BusNumber, (ULONG)&bus,
+        PRM_SlotNumber, (ULONG)&slot,
+        PRM_FunctionNumber, (ULONG)&function,
+        PRM_BoardOwner, (ULONG)&owner,
+        PRM_HeaderType, (ULONG)&dheadertype,
+        PRM_SubsysVendor, (ULONG)&dsubsysvendor,
+        PRM_SubsysID, (ULONG)&dsubsysid,
+        PRM_Interface, (ULONG)&dinterface,
        TAG_END);
-      GetVendorString(vendors_file, vendor, vendor_name, 80);
-      GetDeviceString(vendors_file, device, device_name, 80);
-      Printf("Board in slot %ld, function %ld\n", slot, function);
-      Printf("Vendor: \033[1m%s\033[0m\nDevice: \033[1m%s\033[0m\nRevision: %ld.\n",
-       (LONG)vendor_name, (LONG)device_name, revision);
-      Printf("Device class %02lx, subclass %02lx.\n", dclass, dsubclass);
+      GetVendorString(vendors_file, vendor, vendor_name, STR_VENDORID_MAX);
+      GetDeviceString(vendors_file, device, device_name, STR_VENDORID_MAX);
+      Printf("Board on bus %ld in slot %ld, function %ld\n", bus, slot, function);
+      Printf("Vendor: ($%04lx) \033[1m%s\033[0m\nDevice: ($%04lx) \033[1m%s\033[0m\nRevision: %ld.\n",
+       vendor, (LONG)vendor_name, device, (LONG)device_name, revision);
+      Printf("Device class %02lx, subclass %02lx, progIF %02lx, intLine %03lx, intPin %03lx, LatencyTimer %03lx.\n", dclass, dsubclass, dinterface, pc_IntLine, pc_IntPin, pc_LatencyTimer);
       for (blk = 0; blk < 6; blk++)
        {
         Prm_GetBoardAttrsTags (board,
