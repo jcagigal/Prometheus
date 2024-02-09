@@ -1,0 +1,13 @@
+CC=vc
+#CF = -c -g -O2 -msmall-code -fbaserel -fno-builtin
+
+prmscan:
+	$(CC) prmscan.c -o PrmScan
+
+testreadcfg:
+	$(CC) testreadcfg.c -o testreadcfg
+
+
+
+	
+

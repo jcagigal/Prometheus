@@ -60,7 +60,6 @@ typedef VOID PCIBoard;
 
 #define PRM_LatencyTimer      0x6EDA0017
 #define PRM_CacheLineSize     0x6EDA0018
-
 #define PRM_InterruptPin      0x6EDA0019
 #define PRM_InterruptLine     0x6EDA001A
 

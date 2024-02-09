@@ -137,7 +137,6 @@ int main(void)
   UBYTE device_name[STR_VENDORID_MAX];
 
   Printf ("\nPrmScan 1.8 (14.09.2023) by Grzegorz Kraszewski, Dennis van der Boon & Jaime Cagigal\n");
-  Printf ("PCI cards listing:\n-------------------------------------------------\n");
   if (PrometheusBase = OpenLibrary ("prometheus.library", 2))
    {
     APTR board = NULL;

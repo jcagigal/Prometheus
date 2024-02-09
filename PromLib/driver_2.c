@@ -667,13 +667,13 @@ void QueryCard (struct PrometheusBase *pb, struct PCIBus *pcibus, volatile struc
       CacheClearU();
       pcinode->pn_TagList[tagindex++].ti_Data = conf->pc_HeaderType;
 	  
-	  pcinode->pn_TagList[tagindex].ti_Tag = PRM_LatencyTimer;
+/*	  pcinode->pn_TagList[tagindex].ti_Tag = PRM_LatencyTimer;
       CacheClearU();
       pcinode->pn_TagList[tagindex++].ti_Data = conf->pc_LatencyTimer;
 
 	  pcinode->pn_TagList[tagindex].ti_Tag = PRM_CacheLineSize;
       CacheClearU();
-      pcinode->pn_TagList[tagindex++].ti_Data = conf->pc_CacheLineSize;
+      pcinode->pn_TagList[tagindex++].ti_Data = conf->pc_CacheLineSize;*/
 
 
       /* up to six base registers */
