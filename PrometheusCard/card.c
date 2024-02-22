@@ -81,7 +81,7 @@ void RegisterOwner(struct CardBase *cb, void *board, struct Node *driver)
 UWORD SetSwitch(__REGA0(struct BoardInfo *bi), __REGD0(UWORD enabled))
   {
 	  BOOL oldState = bi->MoniSwitch;
-	  int switch_type = bi->MonitorSwitchType;
+	  int switch_type = bi->CardBase->monitorSwitchType;
 	  
 	  UBYTE cia_bits=0;
 	  switch (switch_type)
@@ -321,7 +321,7 @@ BOOL InitCard(__REGA0(struct BoardInfo *bi), __REGA1(char **ToolTypes), __REGA6(
 	  if (NONE != switch_type)
         {
           /* plug in handler for external monitor switch */
-          bi->MonitorSwitchType = switch_type;
+          bi->CardBase->monitorSwitchType = switch_type;
           bi->SetSwitch = (void *)SetSwitch;
 
           /* set startup value */

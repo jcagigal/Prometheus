@@ -45,6 +45,7 @@ BOOL InitS3ViRGE(struct CardBase *cb, struct BoardInfo *bi)
             case 0x8A01:    // VirgeDX/GX
             case 0x8A02:    // VirgeGX2
             case 0x5631:    // 86c325 [ViRGE]
+//			case 0x8A13:    // 86c368 [Trio 3D/2X]
 				found = TRUE;
 				break;
             case 0x8811:    // Trio64

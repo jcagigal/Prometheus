@@ -2,7 +2,6 @@
 
 #define JSetOldDPMSLevel    CardData[14]
 #define JDPMSLevel          CardData[15]
-#define MonitorSwitchType   CardData[16]
 
 #define VENDOR_E3B            3643
 #define VENDOR_MATAY          44359
@@ -50,6 +49,7 @@ struct CardBase
     struct MinList          cb_MemList;
 //    struct DMAMemChunk      cb_MemRoot;
     struct SignalSemaphore *cb_MemSem;
+	UBYTE					monitorSwitchType;
   };
 
 BOOL Init3dfxVoodoo(struct CardBase *cb, struct BoardInfo *bi);      // check Banshee/Voodoo3/4/5 based cards

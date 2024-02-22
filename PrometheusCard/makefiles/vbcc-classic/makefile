@@ -24,6 +24,12 @@ $(OBJDIR)card_3dfxvoodoo.o : card_3dfxvoodoo.c
 $(OBJDIR)card_3dlabspermedia2.o : card_3dlabspermedia2.c
 	$(CC) $(shell vbccprefs) -c -o $(OBJDIR)card_3dlabspermedia2.o card_3dlabspermedia2.c
 
+#$(OBJDIR)card_ATIRadeon.o : card_ATIRadeon.c
+#	$(CC) $(shell vbccprefs) -c -o $(OBJDIR)card_ATIRadeon.o card_ATIRadeon.c
+
+#$(OBJDIR)card_CirrusGD5446.o : card_CirrusGD5446.c
+#	$(CC) $(shell vbccprefs) -c -o $(OBJDIR)card_CirrusGD5446.o card_CirrusGD5446.c
+
 $(OBJDIR)card_s3virge.o : card_s3virge.c
 	$(CC) $(shell vbccprefs) -c -o $(OBJDIR)card_s3virge.o card_s3virge.c
 
@@ -34,7 +40,8 @@ $(OBJDIR)vbcc_libinit.o : vbcc_libinit.c
 	$(CC) $(shell vbccprefs) -c -o $(OBJDIR)vbcc_libinit.o vbcc_libinit.c
 
 OBJS = $(OBJDIR)vbcc_libinit.o $(OBJDIR)dma.o $(OBJDIR)card_s3virge.o $(OBJDIR)card_3dlabspermedia2.o $(OBJDIR)card_3dfxvoodoo.o\
- $(OBJDIR)card.o
+  $(OBJDIR)card.o
+#$(OBJDIR)card_ATIRadeon.o $(OBJDIR)card_CirrusGD5446.o 
 
 $(EXE) : $(OBJS)
 	$(LD) $(shell vbccprefs) -o $(EXE) $(OBJS)

@@ -2,7 +2,7 @@
 #include <proto/exec.h>
 #include <proto/prometheus.h>
 #include <libraries/prometheus.h>
-//#include "boardinfo.h"
+#include "boardinfo.h"
 #include <proto/picasso96_chip.h>
 
 #include "card.h"
@@ -23,9 +23,6 @@ struct CardInfo
 static ULONG count = 0;
 #define PCI_VENDOR  0x1002
 #define CHIP_NAME   "picasso96/ATIRadeon.chip"
-
-#define ROMBase       ChipData[14]
-#define DeviceID      ChipData[15]
 
 BOOL InitATIRadeon(struct CardBase *cb, struct BoardInfo *bi)
   {
@@ -59,6 +56,14 @@ BOOL InitATIRadeon(struct CardBase *cb, struct BoardInfo *bi)
           PRM_ROM_Address,    (ULONG)&ci.ROM,
 		  PRM_ROM_Size,       (ULONG)&ci.ROMSize,
           TAG_END);
+
+/*       ULONG baseaddr;
+
+       for (i = 0; i < 6; i++)
+        {
+         Prm_GetBoardAttrsTags (any_board, PRM_MemoryAddr0 + i,
+          (ULONG)&baseaddr, TAG_END);
+        }*/
 
         switch(ci.Device)
           {
@@ -187,14 +192,15 @@ BOOL InitATIRadeon(struct CardBase *cb, struct BoardInfo *bi)
 
                 bi->ChipBase = ChipBase;
 
-                bi->DeviceID      = ci.Device;
-                bi->MemoryBase    = ci.Memory0; 		// Framebuffer
-                bi->MemoryIOBase  = ci.Memory1; 
-                bi->RegisterBase  = ci.Memory2;			// MMIO
-                bi->MemorySize    = ci.Memory0Size; 	// FB Size
-//                bi->MemorySize2   = ci.Memory2Size; 	// Registers size
-                bi->ROMBase       = (ULONG)ci.ROM;
-//				bi->ROMSize       = (ULONG)ci.ROMSize;
+//                bi->DeviceID     = ci.Device;
+                bi->MemoryBase   = ci.Memory0; 		// Framebuffer
+                bi->MemoryIOBase = ci.Memory1; 
+                bi->RegisterBase = ci.Memory2;			// MMIO
+                bi->MemorySize   = ci.Memory0Size; 	// FB Size
+//                bi->BIOSBase     = (ULONG)ci.ROM;
+//				bi->BIOSSize     = (ULONG)ci.ROMSize;
+//				bi->IOSize       = (ULONG)ci.Memory1Size;
+//				bi->RegisterSize = (ULONG)ci.Memory2Size;
 
                 // register interrupt server
                 RegisterIntServer(cb, board, &bi->HardInterrupt);
